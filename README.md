@@ -97,6 +97,25 @@ app:main Creating new user { email: 'a@test.com' }
 > app:auth:warning User authentication failed { email: 'b@test.com' }
 > ```
 
+### Panic
+
+Each logger instance includes a `panic` method that can be used for critical errors that should halt execution completely:
+
+```ts
+const log = w("app:critical");
+log.panic("Fatal error occurred", { error }); // This will never return
+```
+
+By default, panic will:
+
+1. Log the error message to stderr
+2. Print a stack trace
+3. Trigger a debugger break
+4. Attempt to exit the process or show an alert (in browsers)
+5. Fallback to infinite loop
+
+You can configure panic to throw an error instead by setting the `W_PANIC_THROWS=1` environment variable.
+
 ### Programmatic Control
 
 An individual logger instance can also be enabled or disabled programmatically:
@@ -119,6 +138,14 @@ const log = w("app:custom");
 log.logger = console.log.bind(console); // or
 log.logger = (...args) => console.log("[CUSTOM]", ...args);
 ```
+
+### Colour Configuration
+
+By default, `w`iretap will use colours in environments that support it. `w`iretap will read the following environment variables (in order of precedence):
+
+-   `FORCE_COLOR`: Force enable coloured output
+-   `NO_COLOR`: Disable coloured output
+-   `CI`: Disable coloured output in CI environments
 
 ## Supported Environments:
 
