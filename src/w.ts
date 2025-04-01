@@ -3,10 +3,14 @@ import { colourNs, selectColour } from "./colours.ts";
 import { env } from "./env.ts";
 import { Namespaces } from "./namespacing.ts";
 
+function noop() {}
+
 const DEBUG: string = env("DEBUG");
 const stderr = context.process?.stderr;
 const useColour = stderr?.isTTY && !env("NO_COLOR");
-const debug = context.console.Console?.(stderr)?.debug || context.console.debug;
+const cons = context.console.Console?.(stderr) ?? context.console;
+const pick = (level: "log" | "debug" | "error") => (cons[level] ?? cons.log ?? noop).bind(cons);
+const ns = (n: string) => (n ? n + " " : "");
 
 /**
  * The underlying namespace manager.
@@ -33,9 +37,8 @@ export interface DebugFn {
 	 * ```
 	 */
 	logger: (...args: unknown[]) => void;
+	panic: (...args: unknown[]) => never;
 }
-
-const ns = (n: string) => (n ? n + " " : "");
 
 /**
  * Create a debug instance for a namespace.
@@ -57,7 +60,7 @@ const ns = (n: string) => (n ? n + " " : "");
  * @param namespace - The namespace to debug.
  * @returns A debug instance.
  */
-export function w(namespace: string = ""): DebugFn {
+export function w(namespace = ""): DebugFn {
 	const debugfn = (...data: unknown[]) => {
 		const start = data.length ? data.shift() : "";
 		if (!debugfn.enabled) return;
@@ -75,7 +78,23 @@ export function w(namespace: string = ""): DebugFn {
 	};
 
 	debugfn.enabled = namespaces.check(namespace);
-	debugfn.logger = debug;
+	debugfn.logger = pick("debug");
+	debugfn.panic = function panic(...data: unknown[]): never {
+		const alertmsg = "PANIC! " + data.join(" ");
+		if (env("W_PANIC_THROWS")) throw new Error(alertmsg);
+		try {
+			debugfn.logger = pick("error");
+			debugfn.enabled = true;
+			debugfn("PANIC! " + (data.shift() ?? ""), ...data, "\n");
+			debugfn.logger(new Error());
+		} catch {}
+		debugger;
+		for (;;)
+			try {
+				context.process?.exit(1);
+				context.alert?.(alertmsg);
+			} catch {}
+	};
 
 	return debugfn;
 }

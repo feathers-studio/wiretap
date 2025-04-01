@@ -3,10 +3,12 @@
 export const context = globalThis as unknown as {
 	// browsers
 	document?: unknown;
+	alert?: (message: string) => void;
 	// Node, Deno, Bun
 	process?: {
 		env: { [key: string]: string };
 		stderr: { isTTY: boolean };
+		exit: (code: number) => void;
 	};
 	// Web, Deno Workers, Cloudflare Workers
 	env?: { [key: string]: string };
@@ -19,8 +21,10 @@ export const context = globalThis as unknown as {
 	};
 	console: {
 		// everywhere
-		debug: (...args: unknown[]) => void;
+		log?: (...args: unknown[]) => void;
+		error?: (...args: unknown[]) => void;
+		debug?: (...args: unknown[]) => void;
 		// Node, Deno, Bun
-		Console?: (stderr: unknown) => { debug: (...args: unknown[]) => void };
+		Console?: (stderr: unknown) => (typeof context)["console"];
 	};
 };
