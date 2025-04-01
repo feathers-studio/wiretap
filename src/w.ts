@@ -1,4 +1,4 @@
-import { context } from "./types.ts";
+import { context } from "./context.ts";
 import { colourNs, selectColour } from "./colours.ts";
 import { env } from "./env.ts";
 import { Namespaces } from "./namespacing.ts";
@@ -7,7 +7,7 @@ function noop() {}
 
 const DEBUG: string = env("DEBUG");
 const stderr = context.process?.stderr;
-const useColour = stderr?.isTTY && !env("NO_COLOR");
+const useColour = env("FORCE_COLOR") || (!env("NO_COLOR") && (stderr?.isTTY ?? context.document) && !env("CI"));
 const cons = context.console.Console?.(stderr) ?? context.console;
 const pick = (level: "log" | "debug" | "error") => (cons[level] ?? cons.log ?? noop).bind(cons);
 const ns = (n: string) => (n ? n + " " : "");
@@ -64,7 +64,8 @@ export function w(namespace = ""): DebugFn {
 	const debugfn = (...data: unknown[]) => {
 		const start = data.length ? data.shift() : "";
 		if (!debugfn.enabled) return;
-		if (context.document)
+		// will fallback to the no-colour logger if useColour is false
+		if (context.document && useColour)
 			debugfn.logger(
 				`%c${ns(namespace)}%c${start}`,
 				`color: #${selectColour(namespace)[3]}`,

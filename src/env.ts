@@ -1,4 +1,4 @@
-import { context } from "./types.ts";
+import { context } from "./context.ts";
 
 const prompts = (variable: string) =>
 	context.Deno?.permissions.querySync?.({ name: "env", variable })?.state === "prompt";
